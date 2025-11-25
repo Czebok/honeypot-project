@@ -1,0 +1,43 @@
+# Production Deployment Guide
+
+## Ubuntu 24.04 LTS Setup
+
+### Install Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo usermod -aG docker $USER
+newgrp docker
+
+### Deploy Honeypot
+cd honeypot_project
+nano .env # Change all passwords!
+docker-compose up -d
+
+### Firewall Configuration
+sudo ufw enable
+sudo ufw allow 22/tcp
+sudo ufw allow 8080/tcp
+sudo ufw allow 5000/tcp
+sudo ufw deny 5432/tcp # Database internal only
+sudo ufw status
+
+### Monitor
+docker-compose ps
+docker stats
+docker-compose logs -f
+
+### Backup
+docker exec honeypot_db pg_dump -U honeypot_user honeypot_db > backup.sql
+
+### SSL/HTTPS
+Install nginx and certbot for production HTTPS setup.
+
+### Logs
+Check logs:
+docker-compose logs <service_name>
+
+
+### Maintenance
+- Daily: Check health, review logs
+- Weekly: Verify attacks, check disk
+- Monthly: Backups, patching, audits
