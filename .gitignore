@@ -1,0 +1,15 @@
+*.log
+/var/log/
+/postgres_data/
+*.db
+*.sql
+.env.local
+.env.production
+.dockerignore
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
