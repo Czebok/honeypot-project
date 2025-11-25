@@ -1,0 +1,118 @@
+version: '3.9'
+
+services:
+  db:
+    build:
+      context: ./database_service
+      dockerfile: Dockerfile
+    container_name: honeypot_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: AdminPass123!
+      POSTGRES_DB: honeypot_db
+      POSTGRES_INITDB_ARGS: "-c shared_buffers=256MB -c max_connections=200"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database_service/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    networks:
+      - honeypot_network
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+
+  honeypot:
+    build:
+      context: ./honeypot_service
+      dockerfile: Dockerfile
+    container_name: honeypot_app
+    environment:
+      DB_HOST: db
+      DB_USER: honeypot_user
+      DB_PASSWORD: SecurePass123!
+      DB_NAME: honeypot_db
+      DB_PORT: "5432"
+      FLASK_ENV: production
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - honeypot_network
+    ports:
+      - "8080:8080"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+      - NET_RAW
+    cap_add:
+      - NET_BIND_SERVICE
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/log/honeypot
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+
+  analytics:
+    build:
+      context: ./analytics_service
+      dockerfile: Dockerfile
+    container_name: honeypot_analytics
+    environment:
+      DB_HOST: db
+      DB_USER: honeypot_user
+      DB_PASSWORD: SecurePass123!
+      DB_NAME: honeypot_db
+      DB_PORT: "5432"
+      FLASK_ENV: production
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - honeypot_network
+    ports:
+      - "5000:5000"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/log/analytics
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+
+networks:
+  honeypot_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
