@@ -61,9 +61,11 @@ def get_attack_stats():
 
         cursor = conn.cursor()
 
+        # 1. Total attacks
         cursor.execute("SELECT COUNT(*) FROM attacks")
         total_attacks = cursor.fetchone()[0]
 
+        # 2. Attacks by type
         cursor.execute("""
             SELECT attack_name, COUNT(*) as count
             FROM attacks
@@ -76,6 +78,7 @@ def get_attack_stats():
             for row in cursor.fetchall()
         ]
 
+        # 3. Top IPs
         cursor.execute("""
             SELECT source_ip, COUNT(*) as count
             FROM attacks
@@ -88,6 +91,7 @@ def get_attack_stats():
             for row in cursor.fetchall()
         ]
 
+        # 4. Top user agents
         cursor.execute("""
             SELECT user_agent, COUNT(*) as count
             FROM attacks
@@ -101,6 +105,7 @@ def get_attack_stats():
             for row in cursor.fetchall()
         ]
 
+        # 5. Recent attacks
         cursor.execute("""
             SELECT id, attack_name, source_ip, user_agent, timestamp
             FROM attacks
@@ -216,7 +221,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
         .stat-label {
             flex: 1;
-            word-break: break-word;
+            word-break: break-all;
             margin-right: 10px;
             white-space: normal;
         }
@@ -229,12 +234,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
+            table-layout: fixed;        /* umożliwia łamanie w komórkach */
         }
         th, td {
             padding: 12px;
             text-align: left;
             border-bottom: 1px solid #334155;
-            word-break: break-word;
+            word-break: break-all;      /* łamie długie UA */
+            white-space: normal;
+            overflow: visible;
+            text-overflow: clip;
         }
         th {
             background: #1e293b;
@@ -327,19 +336,28 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
                     let html = '';
                     data.attacks_by_type.forEach(item => {
-                        html += `<div class="stat-item"><div class="stat-label">${item.name}</div><div class="stat-count">${item.count}</div></div>`;
+                        html += `<div class="stat-item">
+                                    <div class="stat-label">${item.name}</div>
+                                    <div class="stat-count">${item.count}</div>
+                                 </div>`;
                     });
                     document.getElementById('attacks-by-type').innerHTML = html;
 
                     html = '';
                     data.top_ips.forEach(item => {
-                        html += `<div class="stat-item"><div class="stat-label">${item.ip}</div><div class="stat-count">${item.count}</div></div>`;
+                        html += `<div class="stat-item">
+                                    <div class="stat-label">${item.ip}</div>
+                                    <div class="stat-count">${item.count}</div>
+                                 </div>`;
                     });
                     document.getElementById('top-ips').innerHTML = html;
 
                     html = '';
                     data.top_agents.forEach(item => {
-                        html += `<div class="stat-item"><div class="stat-label">${item.agent}</div><div class="stat-count">${item.count}</div></div>`;
+                        html += `<div class="stat-item">
+                                    <div class="stat-label">${item.agent}</div>
+                                    <div class="stat-count">${item.count}</div>
+                                 </div>`;
                     });
                     document.getElementById('top-agents').innerHTML = html;
 
@@ -352,7 +370,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                                     <td>${item.user_agent || 'N/A'}</td>
                                  </tr>`;
                     });
-                    if (html === '') html = '<tr><td colspan="4">No attacks recorded</td></tr>';
+                    if (html === '') {
+                        html = '<tr><td colspan="4">No attacks recorded</td></tr>';
+                    }
                     document.getElementById('recent-attacks').innerHTML = html;
 
                     document.getElementById('last-update').textContent = formatDate(data.last_update);
