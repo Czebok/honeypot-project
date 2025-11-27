@@ -2,6 +2,8 @@
 
 ## Ubuntu 24.04 LTS Setup
 
+sudo apt update && sudo apt upgrade -y
+
 ### Install Docker
 curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
@@ -9,7 +11,8 @@ sudo usermod -aG docker $USER
 newgrp docker
 
 ### Deploy Honeypot
-cd honeypot_project
+git clone https://github.com/Czebok/honeypot-project.git
+cd honeypot-project
 nano .env # Change all passwords!
 docker-compose up -d
 
