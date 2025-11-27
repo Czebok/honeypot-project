@@ -1,25 +1,3 @@
-"""
-ANALYTICS DASHBOARD SERVICE - Real-time attack statistics
-=========================================================
-
-Provides real-time attack statistics and visualization.
-
-FEATURES:
-- Fetches attack data from PostgreSQL
-- Aggregates statistics (totals, top IPs, attack types)
-- Updates cache every 30 seconds
-- Serves real-time dashboard UI
-- Provides JSON API for programmatic access
-- Auto-refreshes in browser every 10 seconds
-
-SECURITY FEATURES:
-✓ Read-only database queries
-✓ Parameterized queries
-✓ Limited result sets
-✓ Non-root execution
-✓ Read-only filesystem
-"""
-
 import os
 import json
 import logging
@@ -31,13 +9,16 @@ from functools import wraps
 from threading import Thread
 import time
 
+
 app = Flask(__name__)
+
 
 DB_HOST = os.getenv('DB_HOST', 'db')
 DB_USER = os.getenv('DB_USER', 'honeypot_user')
 DB_PASSWORD = os.getenv('DB_PASSWORD', 'SecurePass123!')
 DB_NAME = os.getenv('DB_NAME', 'honeypot_db')
 DB_PORT = os.getenv('DB_PORT', '5432')
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -49,19 +30,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ============================================================================
-# CACHE SYSTEM - In-memory caching for performance
-# ============================================================================
 
-"""
-WHY CACHE?
-- Database queries take time (complex aggregations)
-- Too many requests would overload database
-- Browser polls every 10 seconds (lots of requests)
-- Cache updates every 30 seconds (good balance)
-
-BENEFIT: 90% reduction in database load!
-"""
 dashboard_cache = {
     'last_update': None,
     'data': {}
@@ -69,18 +38,13 @@ dashboard_cache = {
 
 
 def get_db_connection():
-    """
-    GET_DB_CONNECTION - Establish database connection
-    
-    Returns connection or None if failed (graceful degradation)
-    """
     try:
         conn = psycopg2.connect(
-            host=DB_HOST, 
-            user=DB_USER, 
+            host=DB_HOST,
+            user=DB_USER,
             password=DB_PASSWORD,
-            database=DB_NAME, 
-            port=DB_PORT, 
+            database=DB_NAME,
+            port=DB_PORT,
             connect_timeout=5
         )
         return conn
@@ -90,33 +54,16 @@ def get_db_connection():
 
 
 def get_attack_stats():
-    """
-    GET_ATTACK_STATS - Fetch and aggregate all attack statistics
-    =============================================================
-    
-    QUERIES EXECUTED:
-    
-    1. Total attacks count
-    2. Attacks by type (top 10)
-    3. Top attacking IPs (top 20)
-    4. Top user agents (top 15)
-    5. Recent attacks (last 50)
-    
-    RETURNS:
-    Dictionary with all statistics or None if error
-    """
     try:
         conn = get_db_connection()
         if not conn:
             return None
-        
+
         cursor = conn.cursor()
-        
-        # QUERY 1: Total attacks
+
         cursor.execute("SELECT COUNT(*) FROM attacks")
         total_attacks = cursor.fetchone()[0]
-        
-        # QUERY 2: Attacks by type (top 10)
+
         cursor.execute("""
             SELECT attack_name, COUNT(*) as count
             FROM attacks
@@ -128,8 +75,7 @@ def get_attack_stats():
             {'name': row[0], 'count': row[1]}
             for row in cursor.fetchall()
         ]
-        
-        # QUERY 3: Top IPs (top 20)
+
         cursor.execute("""
             SELECT source_ip, COUNT(*) as count
             FROM attacks
@@ -141,8 +87,7 @@ def get_attack_stats():
             {'ip': row[0], 'count': row[1]}
             for row in cursor.fetchall()
         ]
-        
-        # QUERY 4: Top user agents (top 15)
+
         cursor.execute("""
             SELECT user_agent, COUNT(*) as count
             FROM attacks
@@ -155,8 +100,7 @@ def get_attack_stats():
             {'agent': row[0], 'count': row[1]}
             for row in cursor.fetchall()
         ]
-        
-        # QUERY 5: Recent attacks (last 50)
+
         cursor.execute("""
             SELECT id, attack_name, source_ip, user_agent, timestamp
             FROM attacks
@@ -173,10 +117,10 @@ def get_attack_stats():
             }
             for row in cursor.fetchall()
         ]
-        
+
         cursor.close()
         conn.close()
-        
+
         return {
             'total_attacks': total_attacks,
             'attacks_by_type': attacks_by_type,
@@ -185,21 +129,13 @@ def get_attack_stats():
             'recent_attacks': recent,
             'last_update': datetime.utcnow().isoformat()
         }
-        
+
     except Exception as e:
         logger.error(f"Error getting attack stats: {e}")
         return None
 
 
 def update_cache():
-    """
-    UPDATE_CACHE - Background thread that refreshes cache every 30 seconds
-    
-    WHY 30 SECONDS?
-    - Fresh enough: Data never stale > 30 seconds
-    - Efficient: Only 2 queries/minute (vs 60 without cache)
-    - Browser polls 10s: Always has fresh cache
-    """
     while True:
         try:
             data = get_attack_stats()
@@ -209,18 +145,13 @@ def update_cache():
                 logger.info("Dashboard cache updated")
         except Exception as e:
             logger.error(f"Error updating cache: {e}")
-        
+
         time.sleep(30)
 
 
-# Start background cache thread
 cache_thread = Thread(target=update_cache, daemon=True)
 cache_thread.start()
 
-
-# ============================================================================
-# DASHBOARD HTML - Dark-themed UI with auto-refresh
-# ============================================================================
 
 HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
@@ -287,6 +218,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             flex: 1;
             word-break: break-word;
             margin-right: 10px;
+            white-space: normal;
         }
         .stat-count {
             font-weight: bold;
@@ -302,6 +234,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             padding: 12px;
             text-align: left;
             border-bottom: 1px solid #334155;
+            word-break: break-word;
         }
         th {
             background: #1e293b;
@@ -321,7 +254,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <body>
     <div class="container">
         <h1>🍯 Honeypot Analytics Dashboard</h1>
-        
+
         <div class="grid">
             <div class="card">
                 <div class="card-title">Total Attacks</div>
@@ -336,22 +269,22 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 <div class="card-value" id="unique-ips">-</div>
             </div>
         </div>
-        
+
         <h2>Attack Types</h2>
         <div class="card">
             <div id="attacks-by-type"></div>
         </div>
-        
+
         <h2>Top Source IPs</h2>
         <div class="card">
             <div id="top-ips"></div>
         </div>
-        
+
         <h2>Top User Agents</h2>
         <div class="card">
             <div id="top-agents"></div>
         </div>
-        
+
         <h2>Recent Attacks</h2>
         <div class="card">
             <table>
@@ -368,17 +301,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 </tbody>
             </table>
         </div>
-        
+
         <div class="update-time">
             Last updated: <span id="last-update">-</span>
         </div>
     </div>
-    
+
     <script>
         function formatDate(dateStr) {
             return new Date(dateStr).toLocaleString();
         }
-        
+
         function updateDashboard() {
             fetch('/api/stats')
                 .then(r => r.json())
@@ -387,42 +320,46 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         console.error(data.error);
                         return;
                     }
-                    
+
                     document.getElementById('total-attacks').textContent = data.total_attacks;
                     document.getElementById('unique-types').textContent = data.attacks_by_type.length;
                     document.getElementById('unique-ips').textContent = data.top_ips.length;
-                    
+
                     let html = '';
                     data.attacks_by_type.forEach(item => {
                         html += `<div class="stat-item"><div class="stat-label">${item.name}</div><div class="stat-count">${item.count}</div></div>`;
                     });
                     document.getElementById('attacks-by-type').innerHTML = html;
-                    
+
                     html = '';
                     data.top_ips.forEach(item => {
                         html += `<div class="stat-item"><div class="stat-label">${item.ip}</div><div class="stat-count">${item.count}</div></div>`;
                     });
                     document.getElementById('top-ips').innerHTML = html;
-                    
+
                     html = '';
                     data.top_agents.forEach(item => {
-                        let agent = item.agent.substring(0, 60) + (item.agent.length > 60 ? '...' : '');
-                        html += `<div class="stat-item"><div class="stat-label" title="${item.agent}">${agent}</div><div class="stat-count">${item.count}</div></div>`;
+                        html += `<div class="stat-item"><div class="stat-label">${item.agent}</div><div class="stat-count">${item.count}</div></div>`;
                     });
                     document.getElementById('top-agents').innerHTML = html;
-                    
+
                     html = '';
                     data.recent_attacks.forEach(item => {
-                        html += `<tr><td>${formatDate(item.timestamp)}</td><td>${item.attack_name}</td><td>${item.source_ip}</td><td>${item.user_agent ? item.user_agent.substring(0, 40) + '...' : 'N/A'}</td></tr>`;
+                        html += `<tr>
+                                    <td>${formatDate(item.timestamp)}</td>
+                                    <td>${item.attack_name}</td>
+                                    <td>${item.source_ip}</td>
+                                    <td>${item.user_agent || 'N/A'}</td>
+                                 </tr>`;
                     });
                     if (html === '') html = '<tr><td colspan="4">No attacks recorded</td></tr>';
                     document.getElementById('recent-attacks').innerHTML = html;
-                    
+
                     document.getElementById('last-update').textContent = formatDate(data.last_update);
                 })
                 .catch(err => console.error('Error fetching stats:', err));
         }
-        
+
         updateDashboard();
         setInterval(updateDashboard, 10000);
     </script>
@@ -433,23 +370,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
 @app.route('/')
 def dashboard():
-    """
-    DASHBOARD ROUTE - Serve main analytics dashboard
-    
-    ENDPOINT: GET /
-    RETURNS: Rendered HTML template
-    """
     return render_template_string(HTML_TEMPLATE)
 
 
 @app.route('/api/stats')
 def get_stats():
-    """
-    STATISTICS API ENDPOINT - RESTful API for dashboard
-    
-    ENDPOINT: GET /api/stats
-    RETURNS: JSON with all attack statistics
-    """
     try:
         if dashboard_cache['data']:
             return jsonify(dashboard_cache['data'])
@@ -468,13 +393,8 @@ def get_stats():
 
 @app.route('/health')
 def health():
-    """
-    HEALTH CHECK ENDPOINT
-    
-    ENDPOINT: GET /health
-    RETURNS: {"status": "healthy"}
-    """
     return jsonify({'status': 'healthy'}), 200
+
 
 os.makedirs('/var/log/analytics', exist_ok=True)
 logger.info("Starting analytics service...")
