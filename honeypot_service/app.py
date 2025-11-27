@@ -277,21 +277,6 @@ class AttackDetector:
     ATTACK DETECTOR CLASS - Regex-based attack pattern matching
     ============================================================
     
-    PURPOSE:
-    Central detection engine for identifying various web application attacks.
-    Uses regex pattern matching to identify malicious payloads in requests.
-    
-    SECURITY APPROACH:
-    - Signature-based detection (similar to antivirus)
-    - Multiple patterns per attack type (defense in depth)
-    - Case-insensitive matching (?i regex flag)
-    - Checks multiple request components (query string, body, headers)
-    
-    DETECTION METHODS INCLUDED:
-    1. detect_sql_injection() - SQL injection patterns
-    2. detect_xss_attempt() - Cross-site scripting patterns
-    3. detect_path_traversal() - Directory traversal attempts
-    
     LIMITATIONS:
     - Pattern-based detection (not behavioral analysis)
     - Can be bypassed by obfuscation (encoded payloads)
@@ -312,34 +297,13 @@ class AttackDetector:
     
     @staticmethod
     def detect_sql_injection(data):
-        """
-        DETECT_SQL_INJECTION METHOD - Identify SQL injection patterns
-        ==============================================================
-        
-        PURPOSE:
-        Identifies SQL injection attack patterns in input data.
-        
-        DETECTION PATTERNS (3 main categories):
-        
-        PATTERN 1 - UNION-based SQLi:
-        - Regex: (?i)(union|select|insert|update|delete|drop)\s+(from|where)
-        - Example: "1 UNION SELECT * FROM users"
-        - Attack: Combines query results to extract data
-        
-        PATTERN 2 - Boolean-based SQLi:
-        - Regex: (?i)('|\")\s*(or|and)\s*('|\")\s*=
-        - Example: "1' OR '1'='1"
-        - Attack: Manipulates query logic
-        
-        PATTERN 3 - Comment-based SQLi:
-        - Regex: (?i)(--|xp_|sp_)
-        - Example: "1' OR 1=1 --"
-        - Attack: Comments out query restrictions
-        """
+
         sql_patterns = [
-            r"(?i)(union|select|insert|update|delete|drop)\s+(from|where)",
-            r"(?i)('|\")\s*(or|and)\s*('|\")\s*=",
-            r"(?i)(--|xp_|sp_)",
+            r"(?i)(union\s+select|select\s+.*\s+from|insert\s+into|update\s+.*\s+set|delete\s+from|drop\s+table|alter\s+table|create\s+table)",
+            r"(?i)(or|and)\s+([^\s]+)\s*=\s*([^\s]+)",  # logiczne warunki typu OR 1=1
+            r"(?i)(--|#|/\*|\*/)",                     # komentarze SQL
+            r"(?i)['\"\\;]",                          # podstawowe znaki specjalne
+            r"(?i)(exec(\s+|\()+xp_|sp_|information_schema)",  # wywołania procedur i schematów
         ]
         
         for pattern in sql_patterns:
@@ -349,29 +313,28 @@ class AttackDetector:
     
     @staticmethod
     def detect_xss_attempt(data):
-        """
-        DETECT_XSS_ATTEMPT METHOD - Identify Cross-Site Scripting patterns
-        ===================================================================
-        
-        DETECTION PATTERNS (3 main categories):
-        
-        PATTERN 1 - Script tags and protocols:
-        - Regex: (?i)(<script|javascript:|onerror=|onload=)
-        - Example: "<script>alert('xss')</script>"
-        
-        PATTERN 2 - Dynamic code execution:
-        - Regex: (?i)(alert\(|eval\(|expression\()
-        - Example: "alert('XSS')"
-        
-        PATTERN 3 - DOM-based XSS vectors:
-        - Regex: (?i)(<iframe|<object|<embed)
-        - Example: "<iframe src='evil.com'></iframe>"
-        """
+
         xss_patterns = [
-            r"(?i)(<script|javascript:|onerror=|onload=)",
-            r"(?i)(alert\(|eval\(|expression\()",
-            r"(?i)(<iframe|<object|<embed)",
+            # Podstawowe tagi i atrybuty event handlerów
+            r"(?i)(<script|<iframe|<object|<embed|<svg|<img|<body|<html)",
+            r"(?i)(onload|onerror|onclick|onmouseover|onfocus|onblur|onchange|onsubmit|onmouse|onkey)",
+            
+            # JavaScript protokoły i funkcje
+            r"(?i)(javascript:|vbscript:|data:|livescript:)",
+            r"(?i)(alert\s*\(|confirm\s*\(|prompt\s*\(|eval\s*\(|execScript|expression\s*\(|setTimeout|setInterval)",
+            
+            # Obejścia filtrów i kodowanie
+            r"(?i)(\%3Cscript|\%3Ciframe|javascript\s*\%3A)",
+            r"(?i)(<script[^>]*>|<iframe[^>]*>)",
+            
+            # Dodatkowe niebezpieczne wzorce
+            r"(?i)(document\.(cookie|write|exec)|window\.(location|alert)|location\s*\.=)",
+            r"(?i)(srcdoc=|formaction=|action\s*=\s*['\"]?javascript)",
+            
+            # Unicode i HTML entities
+            r"(?i)(\u003cscript|\&#x3c;script|&#60;script)",
         ]
+
         
         for pattern in xss_patterns:
             if re.search(pattern, str(data)):
@@ -380,28 +343,25 @@ class AttackDetector:
     
     @staticmethod
     def detect_path_traversal(data):
-        """
-        DETECT_PATH_TRAVERSAL METHOD - Identify directory traversal attempts
-        =====================================================================
-        
-        DETECTION PATTERNS (3 main categories):
-        
-        PATTERN 1 - Directory traversal sequences:
-        - Regex: \.\.[/\\]+
-        - Example: "../../../../etc/passwd"
-        
-        PATTERN 2 - URL-encoded traversal:
-        - Regex: (?i)(%2e%2e)
-        - Example: "%2e%2e/etc/passwd"
-        
-        PATTERN 3 - Sensitive file access:
-        - Regex: (?i)(etc/passwd|windows/system32)
-        - Example: "/etc/passwd"
-        """
+
         traversal_patterns = [
+            # Klasyczne sekwencje ścieżek do wyjścia z katalogu (../ lub ..\)
             r"\.\.[/\\]+",
-            r"(?i)(%2e%2e)",
-            r"(?i)(etc/passwd|windows/system32)",
+            
+            # URL-encoded (procentowe) odpowiedniki sekwencji ../
+            r"(?i)(%2e%2e[/\\]+|%2e%2e%2f|%2e%2e\\/)",
+            
+            # Próby odwołania do kluczowych plików systemu Unix i Windows
+            r"(?i)(etc/passwd|windows/system32|boot.ini|win.ini)",
+            
+            # Próby użycia niedozwolonych absolutnych ścieżek/root (opcjonalne)
+            r"(?i)(/proc/self/environ|/var/log|C:\\Windows\\System32)",
+            
+            # Omijanie poprzez wielokrotne ../ (tzw. dot-dot-slash sequences)
+            r"(\.\./)+",
+            
+            # Próby zagnieżdżonego kodowania znaków dla ../
+            r"(%252e%252e|%255c%255c)",
         ]
         
         for pattern in traversal_patterns:
