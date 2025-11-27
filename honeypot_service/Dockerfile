@@ -22,4 +22,6 @@ USER honeypot
 
 EXPOSE 8080
 
-CMD ["python", "app.py"]
+# Start via Gunicorn (bez dev-serwera Werkzeug)
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:8080", "app:app", \
+     "--access-logfile", "-", "--error-logfile", "-"]

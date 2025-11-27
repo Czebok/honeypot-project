@@ -557,11 +557,4 @@ def not_found(error):
     return jsonify({'error': 'Not Found'}), 404
 
 
-if __name__ == '__main__':
-    """
-    APPLICATION STARTUP
-    ===================
-    Starts honeypot service on 0.0.0.0:8080
-    """
-    logger.info("Starting honeypot service...")
-    app.run(host='0.0.0.0', port=8080, debug=False, threaded=True)
+logger.info("Starting honeypot service...")
