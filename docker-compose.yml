@@ -58,7 +58,7 @@ services:
     networks:
       - honeypot_network
     ports:
-      - "8080:8080"
+      - "80:80"
     security_opt:
       - no-new-privileges:true
     cap_drop:

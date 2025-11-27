@@ -20,8 +20,8 @@ RUN mkdir -p /var/log/honeypot && chown honeypot:honeypot /var/log/honeypot
 # Switch to non-root user
 USER honeypot
 
-EXPOSE 8080
+EXPOSE 80
 
 # Start via Gunicorn (bez dev-serwera Werkzeug)
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:8080", "app:app", \
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:80", "app:app", \
      "--access-logfile", "-", "--error-logfile", "-"]
