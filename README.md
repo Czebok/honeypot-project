@@ -121,11 +121,15 @@ Complete honeypot system with attack detection, database, and analytics dashboar
 ## Troubleshooting
 
 **Check logs**
+
 docker-compose logs -f
 
 **Restart**
+
 docker-compose restart
 
 **Reset**
+
 docker-compose down -v
+
 docker-compose up -d
