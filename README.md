@@ -23,8 +23,8 @@
 | # | Payload | Regex | Command |
 |---|---------|-------|---------|
 | 1 | UNION SELECT | `regex[0]` | `curl -s "http://35.159.122.103/?id=1'+UNION+SELECT+1\,2\,3--"` |
-| 2 | OR 1=1 | `regex[1]` | `curl -s "http://35.159.122.103/?login=admin' OR '1'='1'"` |
-| 3 | SLEEP() | `regex[7]` | `curl -s "http://35.159.122.103/?id=1; SLEEP\(5\)--"` |
+| 2 | OR 1=1 | `regex[1]` | `curl -s "http://35.159.122.103/?login=admin'+OR+'1'='1'"` |
+| 3 | SLEEP() | `regex[7]` | `curl -s "http://35.159.122.103/?id=1;+SLEEP\(5\)--"` |
 
 ### 🕷️ XSS Attacks (2/3 ✅)
 
