@@ -23,18 +23,23 @@ Complete honeypot system with attack detection, database, and analytics dashboar
 
 **SQL Injection**
 ***Logiczne obejście OR 1=1***
+
 - curl -X GET "http://localhost/api/search?q=' OR '1'='1" -v
 
 ***INSERT/UPDATE/DELETE***
+
 - curl -X GET "http://localhost/api/search?q=drop table users" -v
 
 ***Blind SQL Injection (time-based)***
+
 - curl -X GET "http://localhost/api/search?q=1' AND SLEEP(5)--" -v
 
 ***Kodowane znaki (URL encoding)***
+
 - curl -X GET "http://localhost/api/search?q=%27%20OR%20%271%27%3D%271" -v
 
 ***POST z JSON payload***
+
 - curl -X POST -H "Content-Type: application/json" \
   -d '{"username":"admin\" OR 1=1--","password":""}' \
   "http://localhost/api/login" -v
@@ -42,53 +47,67 @@ Complete honeypot system with attack detection, database, and analytics dashboar
 
 **XSS**
 ***Klasyczne XSS***
-curl "http://localhost/?q=<script>alert(1)</script>"
+
+- curl "http://localhost/?q=<script>alert(1)</script>"
 
 ***Event handler***
-curl "http://localhost/?q=<img src=x onerror=alert(1)>"
+
+- curl "http://localhost/?q=<img src=x onerror=alert(1)>"
 
 ***JavaScript URL***
-curl "http://localhost/?q=<a href=javascript:alert(1)>click</a>"
+
+- curl "http://localhost/?q=<a href=javascript:alert(1)>click</a>"
 
 ***URL encoded***
-curl "http://localhost/?q=%3Cscript%3Ealert(1)%3C/script%3E"
+
+- url "http://localhost/?q=%3Cscript%3Ealert(1)%3C/script%3E"
 
 ***Unicode***
-curl "http://localhost/?q=\u003cscript\u003ealert(1)\u003c/script\u003e"
+
+- curl "http://localhost/?q=\u003cscript\u003ealert(1)\u003c/script\u003e"
 
 
 **Path Traversal**
 ***Test klasycznego path traversal (../)***
-curl -X GET "http://localhost/api/file?path=../../etc/passwd" -v
+
+- curl -X GET "http://localhost/api/file?path=../../etc/passwd" -v
 
 ***Test wielokrotnego ../ (dot-dot-slash sequences)***
-curl -X GET "http://localhost/api/file?path=../../../etc/passwd" -v
+
+- curl -X GET "http://localhost/api/file?path=../../../etc/passwd" -v
 
 ***Test z URL-encoded ../***
-curl -X GET "http://localhost/api/file?path=%2e%2e/%2e%2e/%2e%2e/etc/passwd" -v
+
+- curl -X GET "http://localhost/api/file?path=%2e%2e/%2e%2e/%2e%2e/etc/passwd" -v
 
 ***Test próby dostępu do katalogu Windows system32***
-curl -X GET "http://localhost/api/file?path=windows/system32/calc.exe" -v
+
+- curl -X GET "http://localhost/api/file?path=windows/system32/calc.exe" -v
 
 ***Test próby użycia backslash zamiast slash***
-curl -X GET "http://localhost/api/file?path=..\\..\\windows\\system32\\calc.exe" -v
+
+- curl -X GET "http://localhost/api/file?path=..\\..\\windows\\system32\\calc.exe" -v
 
 **Admin Access**
-curl http://localhost:8080/admin
+
+- curl http://localhost:8080/admin
 
 **API Enumeration**
-curl http://localhost:8080/api/users
+
+- curl http://localhost:8080/api/users
 
 
 ## View Attacks
 
 **Connect to database**
-docker exec -it honeypot_db psql -U honeypot_user -d honeypot_db
+
+- docker exec -it honeypot_db psql -U honeypot_user -d honeypot_db
 
 **Query**
-SELECT * FROM attacks ORDER BY timestamp DESC LIMIT 10;
-SELECT attack_name, COUNT() FROM attacks GROUP BY attack_name;
-SELECT source_ip, COUNT() FROM attacks GROUP BY source_ip ORDER BY 2 DESC;
+
+- SELECT * FROM attacks ORDER BY timestamp DESC LIMIT 10;
+- SELECT attack_name, COUNT() FROM attacks GROUP BY attack_name;
+- SELECT source_ip, COUNT() FROM attacks GROUP BY source_ip ORDER BY 2 DESC;
 
 
 ## Security
