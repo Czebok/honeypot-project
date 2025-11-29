@@ -24,75 +24,52 @@ Complete honeypot system with attack detection, database, and analytics dashboar
 ## Testing
 
 **SQL Injection**
-***Logiczne obejście OR 1=1***
+1. UNION SELECT → regex[0]: (union\s+(all\s+)?select)
 
-- curl -X GET "http://localhost/?q='+OR+'1'='1" -v
+curl -s "http://35.159.122.103/?id=1'+UNION+SELECT+1\,2\,3--" 
 
-***Blind SQL Injection (time-based)***
+2. OR 1=1 → regex[1]: (or|and)\s+['\"]?1['\"]?\s*=\s*['\"]?1['\"]?
 
-- curl -X GET "http://localhost/?q=1'+AND+SLEEP(5)--" -v
+curl -s "http://35.159.122.103/?login=admin' OR '1'='1'"
 
-***Kodowane znaki (URL encoding)***
+# 3. SLEEP() → regex[7]: (sleep\s*\()
 
-- curl -X GET "http://localhost/api/search?q=%27%20OR%20%271%27%3D%271" -v
+curl -s "http://35.159.122.103/?id=1; SLEEP\(5\)--"
 
-***POST z JSON payload***
-
-- curl -X POST -H "Content-Type: application/json" \
-  -d '{"username":"admin\" OR 1=1--","password":""}' \
-  "http://localhost/api/login" -v
 
 
 **XSS**
-***Klasyczne XSS***
+1. onerror=alert (regex[1]) - < > jako %3C%3E
 
-- curl "http://localhost/?q=<script>alert(1)</script>"
+curl -s "http://35.159.122.103/?name=%3Cimg%20src=x%20onerror=alert(1)%3E"
 
-***Event handler***
+2. SVG onload (regex[9]) - < > jako %3C%3E
 
-- curl "http://localhost/?q=<img src=x onerror=alert(1)>"
+curl -s "http://35.159.122.103/?input=%3Csvg%20onload=alert(1)%3E"
 
-***JavaScript URL***
+3. %3Cscript (regex[4]) - już zakodowany
 
-- curl "http://localhost/?q=<a href=javascript:alert(1)>click</a>"
-
-***URL encoded***
-
-- url "http://localhost/?q=%3Cscript%3Ealert(1)%3C/script%3E"
-
-***Unicode***
-
-- curl "http://localhost/?q=\u003cscript\u003ealert(1)\u003c/script\u003e"
+curl -s "http://35.159.122.103/?data=%3Cscript%3Ealert(1)%3C/script%3E"
 
 
 **Path Traversal**
-***Test klasycznego path traversal (../)***
+1. c:/windows...
 
-- curl -X GET "http://localhost/api/file?path=../../etc/passwd" -v
+curl -s "http://35.159.122.103/?file=c:/windows/system32"
 
-***Test wielokrotnego ../ (dot-dot-slash sequences)***
+2. ../ → regex[0]: \.\.[/\\]
+curl -s "http://35.159.122.103/?file=../../../etc/passwd"
 
-- curl -X GET "http://localhost/api/file?path=../../../etc/passwd" -v
-
-***Test z URL-encoded ../***
-
-- curl -X GET "http://localhost/api/file?path=%2e%2e/%2e%2e/%2e%2e/etc/passwd" -v
-
-***Test próby dostępu do katalogu Windows system32***
-
-- curl -X GET "http://localhost/api/file?path=windows/system32/calc.exe" -v
-
-***Test próby użycia backslash zamiast slash***
-
-- curl -X GET "http://localhost/api/file?path=..\\..\\windows\\system32\\calc.exe" -v
+3. %2e%2e/ → regex[1]: %2e%2e[/\\%2f%5c]
+curl -s "http://35.159.122.103/?path=%2e%2e%2f%2e%2e%2fetc%2fpasswd"  
 
 **Admin Access**
 
-- curl http://localhost:8080/admin
+1. curl http://localhost:8080/admin
 
 **API Enumeration**
 
-- curl http://localhost:8080/api/users
+1. scurl http://localhost:8080/api/users
 
 
 ## View Attacks
