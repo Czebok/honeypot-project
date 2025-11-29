@@ -16,8 +16,6 @@ FUNKCJE BEZPIECZEŃSTWA:
 ✓ Kontener działa bez uprawnień root
 ✓ System plików w kontenerze w trybie tylko do odczytu
 ✓ Ograniczenie capabilities zmniejsza uprawnienia kontenera
-
-Kod gotowy do produkcji z uwzględnieniem dobrych praktyk bezpieczeństwa.
 """
 
 import os
