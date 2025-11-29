@@ -26,15 +26,11 @@ Complete honeypot system with attack detection, database, and analytics dashboar
 **SQL Injection**
 ***Logiczne obejście OR 1=1***
 
-- curl -X GET "http://localhost/api/search?q=' OR '1'='1" -v
-
-***INSERT/UPDATE/DELETE***
-
-- curl -X GET "http://localhost/api/search?q=drop table users" -v
+- curl -X GET "http://localhost/?q='+OR+'1'='1" -v
 
 ***Blind SQL Injection (time-based)***
 
-- curl -X GET "http://localhost/api/search?q=1' AND SLEEP(5)--" -v
+- curl -X GET "http://localhost/?q=1'+AND+SLEEP(5)--" -v
 
 ***Kodowane znaki (URL encoding)***
 
