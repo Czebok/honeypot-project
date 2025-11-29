@@ -9,9 +9,11 @@ from functools import wraps
 from threading import Thread
 import time
 
-
 app = Flask(__name__)
 
+# ============================================================================
+# KONFIGURACJA BAZY DANYCH
+# ============================================================================
 
 DB_HOST = os.getenv('DB_HOST', 'db')
 DB_USER = os.getenv('DB_USER', 'honeypot_user')
@@ -19,6 +21,9 @@ DB_PASSWORD = os.getenv('DB_PASSWORD', 'SecurePass123!')
 DB_NAME = os.getenv('DB_NAME', 'honeypot_db')
 DB_PORT = os.getenv('DB_PORT', '5432')
 
+# ============================================================================
+# KONFIGURACJA LOGOWANIA
+# ============================================================================
 
 logging.basicConfig(
     level=logging.INFO,
@@ -30,79 +35,78 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
 # ============================================================================
-# CACHE SYSTEM - In-memory caching for performance
+# SYSTEM CACHE - pamięciowy cache dla wyników statystyk
 # ============================================================================
-
 
 """
-WHY CACHE?
-- Database queries take time (complex aggregations)
-- Too many requests would overload database
-- Browser polls every 10 seconds (lots of requests)
-- Cache updates every 30 seconds (good balance)
+DLACZEGO CACHE?
+- Zapytania do bazy (agregacje) są relatywnie kosztowne
+- Dashboard w przeglądarce odświeża dane co 10 sekund
+- Bez cache baza byłaby zasypana identycznymi zapytaniami
+- Cache odświeżany co 30 sekund jest dobrym kompromisem
 
-
-BENEFIT: 90% reduction in database load!
+EFEKT: istotne zmniejszenie obciążenia bazy (znacznie mniej zapytań).
 """
 dashboard_cache = {
     'last_update': None,
     'data': {}
 }
 
-
+# ============================================================================
+# FUNKCJE DOSTĘPU DO BAZY I AGREGACJI STATYSTYK
+# ============================================================================
 
 def get_db_connection():
     """
-    GET_DB_CONNECTION - Establish database connection
-    
-    Returns connection or None if failed (graceful degradation)
+    GET_DB_CONNECTION - nawiązuje połączenie z bazą PostgreSQL
+
+    Zwraca:
+    - obiekt połączenia przy sukcesie
+    - None w przypadku błędu (aplikacja degraduje się łagodnie)
     """
     try:
         conn = psycopg2.connect(
-            host=DB_HOST, 
-            user=DB_USER, 
+            host=DB_HOST,
+            user=DB_USER,
             password=DB_PASSWORD,
-            database=DB_NAME, 
-            port=DB_PORT, 
+            database=DB_NAME,
+            port=DB_PORT,
             connect_timeout=5
         )
         return conn
     except Exception as e:
-        logger.error(f"Database connection error: {e}")
+        logger.error(f"Błąd połączenia z bazą: {e}")
         return None
-
 
 
 def get_attack_stats():
     """
-    GET_ATTACK_STATS - Fetch and aggregate all attack statistics
-    =============================================================
-    
-    QUERIES EXECUTED:
-    
-    1. Total attacks count
-    2. Attacks by type (top 10)
-    3. Top attacking IPs (top 20)
-    4. Top user agents (top 15)
-    5. Recent attacks (last 50)
-    
-    RETURNS:
-    Dictionary with all statistics or None if error
+    GET_ATTACK_STATS - pobiera i agreguje statystyki ataków z tabeli attacks
+    =========================================================================
+
+    Wykonywane zapytania:
+      1. Liczba wszystkich ataków
+      2. Liczba ataków w podziale na typ (TOP 10)
+      3. Najczęstsze IP źródłowe (TOP 20)
+      4. Najczęstsze user‑agenty (TOP 15)
+      5. Lista ostatnich ataków (50 najnowszych)
+
+    Zwraca:
+    Słownik z kompletem statystyk lub None przy błędzie.
     """
     try:
         conn = get_db_connection()
         if not conn:
             return None
-        
+
         cursor = conn.cursor()
-        
-        # QUERY 1: Total attacks
+
+        # 1. Łączna liczba ataków
         cursor.execute("SELECT COUNT(*) FROM attacks")
         total_attacks = cursor.fetchone()[0]
-        
-        # QUERY 2: Attacks by type (top 10)
+
+        # 2. Ataki wg typu (TOP 10)
         cursor.execute("""
             SELECT attack_name, COUNT(*) as count
             FROM attacks
@@ -114,8 +118,8 @@ def get_attack_stats():
             {'name': row[0], 'count': row[1]}
             for row in cursor.fetchall()
         ]
-        
-        # QUERY 3: Top IPs (top 20)
+
+        # 3. Najczęstsze IP (TOP 20)
         cursor.execute("""
             SELECT source_ip, COUNT(*) as count
             FROM attacks
@@ -127,8 +131,8 @@ def get_attack_stats():
             {'ip': row[0], 'count': row[1]}
             for row in cursor.fetchall()
         ]
-        
-        # QUERY 4: Top user agents (top 15)
+
+        # 4. Najczęstsze user‑agenty (TOP 15)
         cursor.execute("""
             SELECT user_agent, COUNT(*) as count
             FROM attacks
@@ -141,8 +145,8 @@ def get_attack_stats():
             {'agent': row[0], 'count': row[1]}
             for row in cursor.fetchall()
         ]
-        
-        # QUERY 5: Recent attacks (last 50)
+
+        # 5. Ostatnie ataki (50 najnowszych)
         cursor.execute("""
             SELECT id, attack_name, source_ip, user_agent, timestamp
             FROM attacks
@@ -159,10 +163,10 @@ def get_attack_stats():
             }
             for row in cursor.fetchall()
         ]
-        
+
         cursor.close()
         conn.close()
-        
+
         return {
             'total_attacks': total_attacks,
             'attacks_by_type': attacks_by_type,
@@ -171,21 +175,21 @@ def get_attack_stats():
             'recent_attacks': recent,
             'last_update': datetime.utcnow().isoformat()
         }
-        
-    except Exception as e:
-        logger.error(f"Error getting attack stats: {e}")
-        return None
 
+    except Exception as e:
+        logger.error(f"Błąd pobierania statystyk ataków: {e}")
+        return None
 
 
 def update_cache():
     """
-    UPDATE_CACHE - Background thread that refreshes cache every 30 seconds
-    
-    WHY 30 SECONDS?
-    - Fresh enough: Data never stale > 30 seconds
-    - Efficient: Only 2 queries/minute (vs 60 without cache)
-    - Browser polls 10s: Always has fresh cache
+    UPDATE_CACHE - wątek w tle odświeżający cache co 30 sekund
+    ===========================================================
+    Założenia:
+    - Dane na dashboardzie mogą być opóźnione maks. o ~30 sekund
+    - Przeglądarka odświeża dane co 10 sekund, ale czyta z cache
+    - Baza dostaje tylko jedno zapytanie agregujące co 30 s,
+      zamiast wielu zapytań z każdej przeglądarki
     """
     while True:
         try:
@@ -193,24 +197,20 @@ def update_cache():
             if data:
                 dashboard_cache['data'] = data
                 dashboard_cache['last_update'] = datetime.utcnow().isoformat()
-                logger.info("Dashboard cache updated")
+                logger.info("Zaktualizowano cache dashboardu")
         except Exception as e:
-            logger.error(f"Error updating cache: {e}")
-        
+            logger.error(f"Błąd podczas aktualizacji cache: {e}")
+
         time.sleep(30)
 
 
-
-# Start background cache thread
+# Uruchomienie wątku aktualizującego cache w tle
 cache_thread = Thread(target=update_cache, daemon=True)
 cache_thread.start()
 
-
-
 # ============================================================================
-# DASHBOARD HTML - Dark-themed UI with auto-refresh
+# SZABLON HTML - ciemny dashboard z auto‑odświeżaniem
 # ============================================================================
-
 
 HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
@@ -420,27 +420,34 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 </html>
 """
 
-
+# ============================================================================
+# ROUTES
+# ============================================================================
 
 @app.route('/')
 def dashboard():
     """
-    DASHBOARD ROUTE - Serve main analytics dashboard
-    
-    ENDPOINT: GET /
-    RETURNS: Rendered HTML template
+    DASHBOARD ROUTE - główny widok panelu analitycznego
+
+    Endpoint:
+      GET /
+
+    Zwraca:
+      Wyrenderowany szablon HTML dashboardu.
     """
     return render_template_string(HTML_TEMPLATE)
-
 
 
 @app.route('/api/stats')
 def get_stats():
     """
-    STATISTICS API ENDPOINT - RESTful API for dashboard
-    
-    ENDPOINT: GET /api/stats
-    RETURNS: JSON with all attack statistics
+    STATISTICS API - endpoint REST zwracający statystyki ataków
+
+    Endpoint:
+      GET /api/stats
+
+    Zwraca:
+      JSON z zagregowanymi statystykami, najczęściej z cache.
     """
     try:
         if dashboard_cache['data']:
@@ -454,18 +461,20 @@ def get_stats():
             else:
                 return jsonify({'error': 'Unable to fetch stats', 'total_attacks': 0}), 500
     except Exception as e:
-        logger.error(f"Error in /api/stats: {e}")
+        logger.error(f"Błąd w /api/stats: {e}")
         return jsonify({'error': str(e)}), 500
-
 
 
 @app.route('/health')
 def health():
     """
     HEALTH CHECK ENDPOINT
-    
-    ENDPOINT: GET /health
-    RETURNS: {"status": "healthy"}
+
+    Endpoint:
+      GET /health
+
+    Zwraca:
+      {"status": "healthy"} z kodem 200 – do monitoringu kontenera.
     """
     return jsonify({'status': 'healthy'}), 200
 
