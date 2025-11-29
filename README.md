@@ -2,6 +2,8 @@
 
 Complete honeypot system with attack detection, database, and analytics dashboard.
 
+![Analytics Service Demo](./analytics.jpg)
+
 ## Services
 
 ### Honeypot (Port 8080)
