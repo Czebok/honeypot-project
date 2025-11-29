@@ -22,27 +22,27 @@
 
 | # | Payload | Regex | Command |
 |---|---------|-------|---------|
-| 1 | UNION SELECT | `regex[0]` | `curl -s "http://35.159.122.103/?id=1'+UNION+SELECT+1\,2\,3--"` |
-| 2 | OR 1=1 | `regex[1]` | `curl -s "http://35.159.122.103/?login=admin'+OR+'1'='1'"` |
-| 3 | SLEEP() | `regex[7]` | `curl -s "http://35.159.122.103/?id=1;+SLEEP\(5\)--"` |
+| 1 | UNION SELECT | `regex[0]` | `curl -s "http://localhost/?id=1'+UNION+SELECT+1\,2\,3--"` |
+| 2 | OR 1=1 | `regex[1]` | `curl -s "http://localhost/?login=admin'+OR+'1'='1'"` |
+| 3 | SLEEP() | `regex[7]` | `curl -s "http://localhost/?id=1;+SLEEP\(5\)--"` |
 
 ### 🕷️ XSS Attacks (2/3 ✅)
 
 | # | Payload | Regex | Command |
 |---|---------|-------|---------|
-| 1 | `<img onerror>` | `regex[1]` | `curl -s "http://35.159.122.103/?name=%3Cimg%20src=x%20onerror=alert(1)%3E"` |
-| 2 | `<svg onload>` | `regex[9]` | `curl -s "http://35.159.122.103/?input=%3Csvg%20onload=alert(1)%3E"` |
-| 3 | `%3Cscript` | `regex[4]` | `curl -s "http://35.159.122.103/?data=%3Cscript%3Ealert(1)%3C/script%3E"` |
+| 1 | `<img onerror>` | `regex[1]` | `curl -s "http://localhost/?name=%3Cimg%20src=x%20onerror=alert(1)%3E"` |
+| 2 | `<svg onload>` | `regex[9]` | `curl -s "http://localhost/?input=%3Csvg%20onload=alert(1)%3E"` |
+| 3 | `%3Cscript` | `regex[4]` | `curl -s "http://localhost/?data=%3Cscript%3Ealert(1)%3C/script%3E"` |
 
 ### 📁 Path Traversal (5/5 ✅)
 
 | # | Payload | Regex | Command |
 |---|---------|-------|---------|
-| 1 | `../` | `regex[0]` | `curl -s "http://35.159.122.103/?file=../../../etc/passwd"` |
-| 2 | `%2e%2e/` | `regex[1]` | `curl -s "http://35.159.122.103/?path=%2e%2e%2f%2e%2e%2fetc%2fpasswd"` |
-| 3 | `/etc/passwd` | `regex[6]` | `curl -s "http://35.159.122.103/?file=/etc/passwd"` |
-| 4 | `/boot.ini` | `regex[6]` | `curl -s "http://35.159.122.103/?file=/boot.ini"` |
-| 5 | `/win.ini` | `regex[6]` | `curl -s "http://35.159.122.103/?file=/win.ini"` |
+| 1 | `../` | `regex[0]` | `curl -s "http://localhost/?file=../../../etc/passwd"` |
+| 2 | `%2e%2e/` | `regex[1]` | `curl -s "http://localhost/?path=%2e%2e%2f%2e%2e%2fetc%2fpasswd"` |
+| 3 | `/etc/passwd` | `regex[6]` | `curl -s "http://localhost/?file=/etc/passwd"` |
+| 4 | `/boot.ini` | `regex[6]` | `curl -s "http://localhost/?file=/boot.ini"` |
+| 5 | `/win.ini` | `regex[6]` | `curl -s "http://localhost/?file=/win.ini"` |
 
 ---
 
@@ -63,15 +63,15 @@ SELECT attack_name, COUNT() as count FROM attacks GROUP BY attack_name ORDER BY 
 
 Admin panel (403 + log)
 
-curl -s “http://35.159.122.103/admin”
+curl -s “http://localhost/admin”
 
 API enumeration (401 + log)
 
-curl -s “http://35.159.122.103/api/users”
+curl -s “http://localhost/api/users”
 
 Health check
 
-curl -s “http://35.159.122.103/health”
+curl -s “http://localhost/health”
 
 
 ---
@@ -83,7 +83,7 @@ curl -s “http://35.159.122.103/health”
 | **View logs** | `docker-compose logs -f` |
 | **Restart** | `docker-compose restart` |
 | **Reset DB** | `docker-compose down -v && docker-compose up -d` |
-| **Analytics** | `http://35.159.122.103:5000` |
+| **Analytics** | `http://localhost:5000` |
 
 ---
 
