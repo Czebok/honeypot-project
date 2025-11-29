@@ -24,6 +24,7 @@ Complete honeypot system with attack detection, database, and analytics dashboar
 ## Testing
 
 **SQL Injection**
+
 1. UNION SELECT → regex[0]: (union\s+(all\s+)?select)
 
 curl -s "http://35.159.122.103/?id=1'+UNION+SELECT+1\,2\,3--" 
@@ -39,6 +40,7 @@ curl -s "http://35.159.122.103/?id=1; SLEEP\(5\)--"
 
 
 **XSS**
+
 1. onerror=alert (regex[1]) - < > jako %3C%3E
 
 curl -s "http://35.159.122.103/?name=%3Cimg%20src=x%20onerror=alert(1)%3E"
@@ -53,6 +55,7 @@ curl -s "http://35.159.122.103/?data=%3Cscript%3Ealert(1)%3C/script%3E"
 
 
 **Path Traversal**
+
 1. c:/windows...
 
 curl -s "http://35.159.122.103/?file=c:/windows/system32"
