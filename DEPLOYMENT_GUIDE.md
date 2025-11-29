@@ -39,6 +39,8 @@ Install nginx and certbot for production HTTPS setup.
 Check logs:
 docker-compose logs <service_name>
 
+**Access dashboard**
+Open: http://localhost:5000
 
 ### Maintenance
 - Daily: Check health, review logs
