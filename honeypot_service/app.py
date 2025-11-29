@@ -76,7 +76,7 @@ Zastosowanie zmiennych środowiskowych:
 Zmiennie środowiskowe:
 - DB_HOST: host serwera PostgreSQL (domyślnie 'db' w sieci Dockera)
 - DB_USER: użytkownik bazy z ograniczonymi uprawnieniami (nie admin)
-- DB_PASSWORD: hasło przechowywane w .env (nie w repozytorium)
+- DB_PASSWORD: hasło przechowywane w .env (docelowo nie w repozytorium)
 - DB_NAME: nazwa bazy z tabelą attacks
 - DB_PORT: port PostgreSQL (domyślnie 5432)
 """
