@@ -1,112 +1,97 @@
-# Honeypot Lab Project
+# 🛡️ Honeypot Lab Project
 
-Complete honeypot system with attack detection, database, and analytics dashboard.
+**Complete honeypot system** with attack detection, PostgreSQL logging, and analytics dashboard.
 
-![Analytics Service Demo](./analytics.jpg)
+![Analytics Dashboard](./analytics.jpg)
 
-## Services
+---
 
-### Honeypot (Port 8080)
-- Detects: SQL Injection, XSS, Path Traversal
-- Logs to: file + database
-- Rate limited: 60 req/min per IP
+## 🏗️ Architecture Overview
 
-### Database (Port 5432)
-- PostgreSQL 16
-- Parameterized queries
-- Limited user permissions
+| Service | Port | Purpose | Status |
+|---------|------|---------|--------|
+| **Honeypot** | 80 | Attack detection + logging | 🟢 Active |
+| **Database** | 5432 | PostgreSQL attack storage | 🟢 Active |
+| **Analytics** | 5000 | Real-time dashboard | 🟢 Active |
 
-### Analytics (Port 5000)
-- Real-time statistics
-- Top IPs, user agents
-- Recent attacks table
+---
 
-## Testing
+## 🧪 Attack Testing Commands
 
-**SQL Injection**
+### 🔪 SQL Injection (3/3 ✅)
 
-1. UNION SELECT → regex[0]: (union\s+(all\s+)?select)
+| # | Payload | Regex | Command |
+|---|---------|-------|---------|
+| 1 | UNION SELECT | `regex[0]` | `curl -s "http://35.159.122.103/?id=1'+UNION+SELECT+1\,2\,3--"` |
+| 2 | OR 1=1 | `regex[1]` | `curl -s "http://35.159.122.103/?login=admin' OR '1'='1'"` |
+| 3 | SLEEP() | `regex[7]` | `curl -s "http://35.159.122.103/?id=1; SLEEP\(5\)--"` |
 
-curl -s "http://35.159.122.103/?id=1'+UNION+SELECT+1\,2\,3--" 
+### 🕷️ XSS Attacks (2/3 ✅)
 
-2. OR 1=1 → regex[1]: (or|and)\s+['\"]?1['\"]?\s*=\s*['\"]?1['\"]?
+| # | Payload | Regex | Command |
+|---|---------|-------|---------|
+| 1 | `<img onerror>` | `regex[1]` | `curl -s "http://35.159.122.103/?name=%3Cimg%20src=x%20onerror=alert(1)%3E"` |
+| 2 | `<svg onload>` | `regex[9]` | `curl -s "http://35.159.122.103/?input=%3Csvg%20onload=alert(1)%3E"` |
+| 3 | `%3Cscript` | `regex[4]` | `curl -s "http://35.159.122.103/?data=%3Cscript%3Ealert(1)%3C/script%3E"` |
 
-curl -s "http://35.159.122.103/?login=admin' OR '1'='1'"
+### 📁 Path Traversal (5/5 ✅)
 
-# 3. SLEEP() → regex[7]: (sleep\s*\()
+| # | Payload | Regex | Command |
+|---|---------|-------|---------|
+| 1 | `../` | `regex[0]` | `curl -s "http://35.159.122.103/?file=../../../etc/passwd"` |
+| 2 | `%2e%2e/` | `regex[1]` | `curl -s "http://35.159.122.103/?path=%2e%2e%2f%2e%2e%2fetc%2fpasswd"` |
+| 3 | `/etc/passwd` | `regex[6]` | `curl -s "http://35.159.122.103/?file=/etc/passwd"` |
+| 4 | `/boot.ini` | `regex[6]` | `curl -s "http://35.159.122.103/?file=/boot.ini"` |
+| 5 | `/win.ini` | `regex[6]` | `curl -s "http://35.159.122.103/?file=/win.ini"` |
 
-curl -s "http://35.159.122.103/?id=1; SLEEP\(5\)--"
+---
 
+## 🔍 View Attack Logs
 
+1. Connect to database
 
-**XSS**
+docker exec -it honeypot_db psql -U honeypot_user -d honeypot_db
 
-1. onerror=alert (regex[1]) - < > jako %3C%3E
+2. Top queries (run in psql)
 
-curl -s "http://35.159.122.103/?name=%3Cimg%20src=x%20onerror=alert(1)%3E"
-
-2. SVG onload (regex[9]) - < > jako %3C%3E
-
-curl -s "http://35.159.122.103/?input=%3Csvg%20onload=alert(1)%3E"
-
-3. %3Cscript (regex[4]) - już zakodowany
-
-curl -s "http://35.159.122.103/?data=%3Cscript%3Ealert(1)%3C/script%3E"
-
-
-**Path Traversal**
-
-1. c:/windows...
-
-curl -s "http://35.159.122.103/?file=c:/windows/system32"
-
-2. ../ → regex[0]: \.\.[/\\]
-curl -s "http://35.159.122.103/?file=../../../etc/passwd"
-
-3. %2e%2e/ → regex[1]: %2e%2e[/\\%2f%5c]
-curl -s "http://35.159.122.103/?path=%2e%2e%2f%2e%2e%2fetc%2fpasswd"  
-
-**Admin Access**
-
-1. curl http://localhost:8080/admin
-
-**API Enumeration**
-
-1. scurl http://localhost:8080/api/users
+SELECT attack_name, COUNT() as count FROM attacks GROUP BY attack_name ORDER BY count DESC; SELECT source_ip, COUNT() as attacks FROM attacks GROUP BY source_ip ORDER BY attacks DESC LIMIT 10; SELECT * FROM attacks ORDER BY timestamp DESC LIMIT 20;
 
 
-## View Attacks
+---
 
-**Connect to database**
+## ⚙️ Additional Endpoints
 
-- docker exec -it honeypot_db psql -U honeypot_user -d honeypot_db
+Admin panel (403 + log)
 
-**Query**
+curl -s “http://35.159.122.103/admin”
 
-- SELECT * FROM attacks ORDER BY timestamp DESC LIMIT 10;
-- SELECT attack_name, COUNT() FROM attacks GROUP BY attack_name;
-- SELECT source_ip, COUNT() FROM attacks GROUP BY source_ip ORDER BY 2 DESC;
+API enumeration (401 + log)
+
+curl -s “http://35.159.122.103/api/users”
+
+Health check
+
+curl -s “http://35.159.122.103/health”
 
 
-## Security
+---
 
-- Parameterized queries prevent SQL injection
-- Input sanitization
-- Non-root execution
-- Network isolation
-- OWASP compliant
+## 🔧 Management Commands
 
-## Troubleshooting
+| Action | Command |
+|--------|---------|
+| **View logs** | `docker-compose logs -f` |
+| **Restart** | `docker-compose restart` |
+| **Reset DB** | `docker-compose down -v && docker-compose up -d` |
+| **Analytics** | `http://35.159.122.103:5000` |
 
-**Check logs**
+---
 
-- docker-compose logs -f
+## 🛡️ Security Features
 
-**Restart**
-
-- docker-compose restart
-
-**Reset**
-
-- docker-compose down -v
-- docker-compose up -d
+- ✅ **Parameterized queries** (no SQLi in DB)
+- ✅ **Rate limiting** (60 req/min/IP) 
+- ✅ **Input sanitization** (null bytes, length limits)
+- ✅ **Non-root container**
+- ✅ **Read-only filesystem**
+- ✅ **IP validation** (anti-spoofing)
