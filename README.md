@@ -122,14 +122,13 @@ Complete honeypot system with attack detection, database, and analytics dashboar
 
 **Check logs**
 
-docker-compose logs -f
+- docker-compose logs -f
 
 **Restart**
 
-docker-compose restart
+- docker-compose restart
 
 **Reset**
 
-docker-compose down -v
-
-docker-compose up -d
+- docker-compose down -v
+- docker-compose up -d
