@@ -24,16 +24,8 @@ sudo ufw allow 5000/tcp
 sudo ufw deny 5432/tcp # Database internal only
 sudo ufw status
 
-### Monitor
-docker-compose ps
-docker stats
-docker-compose logs -f
-
 ### Backup
 docker exec honeypot_db pg_dump -U honeypot_user honeypot_db > backup.sql
-
-### SSL/HTTPS
-Install nginx and certbot for production HTTPS setup.
 
 ### Logs
 Check logs:
