@@ -23,19 +23,19 @@ Complete honeypot system with attack detection, database, and analytics dashboar
 
 **SQL Injection**
 ***Logiczne obejście OR 1=1***
-curl -X GET "http://localhost/api/search?q=' OR '1'='1" -v
+- curl -X GET "http://localhost/api/search?q=' OR '1'='1" -v
 
 ***INSERT/UPDATE/DELETE***
-curl -X GET "http://localhost/api/search?q=drop table users" -v
+- curl -X GET "http://localhost/api/search?q=drop table users" -v
 
 ***Blind SQL Injection (time-based)***
-curl -X GET "http://localhost/api/search?q=1' AND SLEEP(5)--" -v
+- curl -X GET "http://localhost/api/search?q=1' AND SLEEP(5)--" -v
 
 ***Kodowane znaki (URL encoding)***
-curl -X GET "http://localhost/api/search?q=%27%20OR%20%271%27%3D%271" -v
+- curl -X GET "http://localhost/api/search?q=%27%20OR%20%271%27%3D%271" -v
 
 ***POST z JSON payload***
-curl -X POST -H "Content-Type: application/json" \
+- curl -X POST -H "Content-Type: application/json" \
   -d '{"username":"admin\" OR 1=1--","password":""}' \
   "http://localhost/api/login" -v
 
